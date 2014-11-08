@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import logging
 
 
-logger = logging.getLogger(__name__) #pylint: disable=invalid-name
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def csm():

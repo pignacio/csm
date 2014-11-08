@@ -6,7 +6,7 @@ import collections
 import logging
 
 
-logger = logging.getLogger(__name__) #pylint: disable=invalid-name
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def mock_row(**values):

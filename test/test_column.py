@@ -9,7 +9,7 @@ import logging
 from .utils import mock_row
 from csm.columns import _cqltype_from_validator, _schema_from_rows
 
-logger = logging.getLogger(__name__) #pylint: disable=invalid-name
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 BASIC_VALIDATORS = {
     "ascii": "org.apache.cassandra.db.marshal.AsciiType",

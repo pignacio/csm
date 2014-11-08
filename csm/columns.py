@@ -7,7 +7,10 @@ import collections
 import logging
 import re
 
-logger = logging.getLogger(__name__) #pylint: disable=invalid-name
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+
 _MARSHAL_PACKAGE = "org.apache.cassandra.db.marshal"
 _PRE_BASIC_VALIDATORS_BY_TYPE = {
     "ascii": "AsciiType",
@@ -29,7 +32,7 @@ _PRE_BASIC_VALIDATORS_BY_TYPE = {
 }
 _BASIC_VALIDATORS_BY_TYPE = {
     k: "{}.{}".format(_MARSHAL_PACKAGE, v)
-    for k,v in _PRE_BASIC_VALIDATORS_BY_TYPE.items()
+    for k, v in _PRE_BASIC_VALIDATORS_BY_TYPE.items()
 }
 _BASIC_TYPES_BY_VALIDATOR = {
     v: k for k, v in _BASIC_VALIDATORS_BY_TYPE.items()
