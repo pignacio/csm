@@ -9,7 +9,7 @@ import re
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
+__all__ = ["get_system_columns"]
 
 _MARSHAL_PACKAGE = "org.apache.cassandra.db.marshal"
 _PRE_BASIC_VALIDATORS_BY_TYPE = {
@@ -57,15 +57,15 @@ class _Tree(collections.defaultdict):
 
 
 def get_system_columns(server=None):
-    rows = get_system_column_rows(server=server)
+    rows = _get_system_column_rows(server=server)
     return _schema_from_rows(rows)
 
 
-def get_system_column_rows(server=None):
+def _get_system_column_rows(server=None):
     server = server or "127.0.0.1"
     logging.info("Getting server columns from server: '%s'", server)
     session = Cluster([server]).connect()
-    return session.execute("SELECT * FROM system.")
+    return session.execute("SELECT * FROM system.schema_columns")
 
 
 def _schema_from_rows(rows):
