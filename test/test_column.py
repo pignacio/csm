@@ -64,6 +64,16 @@ def test_parse_collection_types():
                "map<{},{}>".format(keytype, valuetype))
 
 
+def test_parse_reversed_types():
+    def _reversed_validator(validator):
+        return "org.apache.cassandra.db.marshal.ReversedType({})".format(
+            validator
+        )
+
+    for cqltype, validator in BASIC_VALIDATORS.items():
+        yield _parse_validator, _reversed_validator(validator), cqltype
+
+
 def test_schema_from_rows():
     rows = [
         mock_row(keyspace_name='keyspace', columnfamily_name='table',
