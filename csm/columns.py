@@ -11,7 +11,14 @@ import re
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 __all__ = ["get_system_columns"]
 
+
 _MARSHAL_PACKAGE = "org.apache.cassandra.db.marshal"
+
+
+def _marshal_package(clz):
+    return "{}.{}".format(_MARSHAL_PACKAGE, clz)
+
+
 _PRE_BASIC_VALIDATORS_BY_TYPE = {
     "ascii": "AsciiType",
     "bigint": "LongType",
@@ -31,7 +38,7 @@ _PRE_BASIC_VALIDATORS_BY_TYPE = {
     "varint": "IntegerType"
 }
 _BASIC_VALIDATORS_BY_TYPE = {
-    k: "{}.{}".format(_MARSHAL_PACKAGE, v)
+    k: _marshal_package(v)
     for k, v in _PRE_BASIC_VALIDATORS_BY_TYPE.items()
 }
 _BASIC_TYPES_BY_VALIDATOR = {
@@ -43,12 +50,13 @@ _PRE_COLLECTION_VALIDATORS_BY_TYPE = {
     "set": "SetType",
 }
 _COLLECTION_VALIDATORS_BY_TYPE = {
-    k: "{}.{}".format(_MARSHAL_PACKAGE, v)
+    k: _marshal_package(v)
     for k, v in _PRE_COLLECTION_VALIDATORS_BY_TYPE.items()
 }
 _COLLECTION_TYPES_BY_VALIDATOR = {
     v: k for k, v in _COLLECTION_VALIDATORS_BY_TYPE.items()
 }
+_REVERSED_TYPE_VALIDATOR = _marshal_package("ReversedType")
 
 
 class _Tree(collections.defaultdict):
@@ -82,6 +90,15 @@ def _cqltype_from_validator(validator):
     split = re.split("[()]", validator)
     base_validator = split[0]
     logger.debug("Base validator: '%s'", base_validator)
+
+    if base_validator == _REVERSED_TYPE_VALIDATOR:
+        try:
+            subvalidator = split[1]
+        except IndexError:
+            raise ValueError("Incomplete validator, expected subvalidator: "
+                             "'{}'".format(validator))
+        return _cqltype_from_validator(subvalidator)
+
     try:
         return _BASIC_TYPES_BY_VALIDATOR[base_validator]
     except KeyError as err:
