@@ -80,12 +80,15 @@ def _schema_from_rows(rows):
     res = _Tree()
     for row in rows:
         res[row.keyspace_name][row.columnfamily_name][row.column_name] = (
-            _cqltype_from_validator(row.validator)
+            parse_validator(row.validator).cqltype
         )
     return res
 
 
-def _cqltype_from_validator(validator):
+Validator = collections.namedtuple("Validator", ['cqltype', 'is_reversed'])
+
+
+def parse_validator(validator):
     logger.debug("Parsing cqltype from validator: '%s'", validator)
     split = re.split("[()]", validator)
     base_validator = split[0]
@@ -97,10 +100,15 @@ def _cqltype_from_validator(validator):
         except IndexError:
             raise ValueError("Incomplete validator, expected subvalidator: "
                              "'{}'".format(validator))
-        return _cqltype_from_validator(subvalidator)
+        parsed = parse_validator(subvalidator)
+        return Validator(cqltype=parsed.cqltype,
+                         is_reversed=not parsed.is_reversed)
 
     try:
-        return _BASIC_TYPES_BY_VALIDATOR[base_validator]
+        return Validator(
+            cqltype=_BASIC_TYPES_BY_VALIDATOR[base_validator],
+            is_reversed=False
+        )
     except KeyError as err:
         pass
 
@@ -122,4 +130,5 @@ def _cqltype_from_validator(validator):
     except KeyError as err:
         raise ValueError("Invalid basic validator: '{}'".format(err))
 
-    return "{}<{}>".format(base_type, ",".join(subtypes))
+    cqltype = "{}<{}>".format(base_type, ",".join(subtypes))
+    return Validator(cqltype=cqltype, is_reversed=False)

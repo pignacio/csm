@@ -5,11 +5,14 @@ from __future__ import absolute_import
 from nose.tools import eq_
 import itertools
 import logging
+import unittest
 
 from .utils import mock_row
-from csm.columns import _cqltype_from_validator, _schema_from_rows
+from csm.columns import parse_validator, _schema_from_rows
+
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
 
 BASIC_VALIDATORS = {
     "ascii": "org.apache.cassandra.db.marshal.AsciiType",
@@ -35,43 +38,63 @@ COLLECTION_VALIDATORS = {
 }
 
 
-def _parse_validator(validator, expected_cqltype):
-    eq_(_cqltype_from_validator(validator), expected_cqltype)
+class ParseValidatorTests(unittest.TestCase):
+    ''' Tests for :py:meth:`csm.columns.parse_validator` '''
+    def _test_parse_validator(self, validator, cqltype, is_reversed):
+        parsed = parse_validator(validator)
+        self.assertEqual(
+            parsed.cqltype, cqltype,
+            msg=("Wrong cqltype. Got {}. Expected {}. Locals={}"
+                 .format(parsed.cqltype, cqltype, locals())))
+        self.assertEqual(
+            parsed.is_reversed, is_reversed,
+            msg=("Wrong is_reversed. Got {}. Expected {}. Locals={}"
+                 .format(parsed.is_reversed, is_reversed, locals())))
 
+    def test_parse_basic_column_types(self):
+        for cqltype, validator in BASIC_VALIDATORS.items():
+            self._test_parse_validator(validator, cqltype, is_reversed=False)
 
-def test_parse_basic_column_types():
-    for cqltype, validator in BASIC_VALIDATORS.items():
-        yield _parse_validator, validator, cqltype
-
-
-def test_parse_collection_types():
-    def _make_validator(collection, *subtypes):
+    def _make_collection_validator(self, collection, *subtypes):
         return "{}({})".format(
             COLLECTION_VALIDATORS[collection],
             ",".join(BASIC_VALIDATORS[st] for st in subtypes)
         )
 
-    for collection in ['set', 'list']:
+    def test_parse_list_types(self):
+        self._test_parse_collection_type("list")
+
+    def test_parse_set_types(self):
+        self._test_parse_collection_type("set")
+
+    def _test_parse_collection_type(self, collection):
         for cqltype in BASIC_VALIDATORS:
-            yield (_parse_validator,
-                   _make_validator(collection, cqltype),
-                   "{}<{}>".format(collection, cqltype))
+            self._test_parse_validator(
+                self._make_collection_validator(collection, cqltype),
+                "{}<{}>".format(collection, cqltype),
+                is_reversed=False,
+            )
 
-    for keytype, valuetype in itertools.product(BASIC_VALIDATORS,
-                                                BASIC_VALIDATORS):
-        yield (_parse_validator,
-               _make_validator("map", keytype, valuetype),
-               "map<{},{}>".format(keytype, valuetype))
+    def test_parse_map_types(self):
+        for keytype, valuetype in itertools.product(BASIC_VALIDATORS,
+                                                    BASIC_VALIDATORS):
+            self._test_parse_validator(
+                self._make_collection_validator("map", keytype, valuetype),
+                "map<{},{}>".format(keytype, valuetype),
+                is_reversed=False
+            )
 
 
-def test_parse_reversed_types():
-    def _reversed_validator(validator):
-        return "org.apache.cassandra.db.marshal.ReversedType({})".format(
-            validator
-        )
+    def test_parse_reversed_types(self):
+        def _reversed_validator(validator):
+            return "org.apache.cassandra.db.marshal.ReversedType({})".format(
+                validator
+            )
 
-    for cqltype, validator in BASIC_VALIDATORS.items():
-        yield _parse_validator, _reversed_validator(validator), cqltype
+        for cqltype, validator in BASIC_VALIDATORS.items():
+            self._test_parse_validator(_reversed_validator(validator), cqltype,
+                                       is_reversed=True)
+
 
 
 def test_schema_from_rows():
